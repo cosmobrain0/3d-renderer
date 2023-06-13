@@ -42,6 +42,16 @@ pub mod matrix {
         pub fn values(&self) -> &[[f32; WIDTH]; HEIGHT] {
             &self.values
         }
+
+        pub fn component_mult(&self, rhs: &Matrix<HEIGHT, WIDTH>) -> Matrix<HEIGHT, WIDTH> {
+            let mut values = [[0.0; WIDTH]; HEIGHT];
+            for i in 0..HEIGHT {
+                for j in 0..WIDTH {
+                    values[i][j] = self.values[i][j] * rhs.values[i][j];
+                }
+            }
+            Matrix { values }
+        }
     }
 
     /// Index as matrix[y][x]
@@ -141,6 +151,20 @@ pub mod matrix {
                         sum += self[i][k] * rhs[k][j];
                     }
                     result[i][j] = sum;
+                }
+            }
+            Matrix::new(result)
+        }
+    }
+
+    impl<const WIDTH: usize, const HEIGHT: usize> Mul<f32> for Matrix<HEIGHT, WIDTH> {
+        type Output = Matrix<HEIGHT, WIDTH>;
+
+        fn mul(self, rhs: f32) -> Self::Output {
+            let mut result = self.values;
+            for i in 0..HEIGHT {
+                for j in 0..WIDTH {
+                    result[i][j] *= rhs;
                 }
             }
             Matrix::new(result)

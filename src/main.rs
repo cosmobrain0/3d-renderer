@@ -1,14 +1,50 @@
+use ruscii::keyboard::Key;
+use screen::screen::{GameState, Screen};
+
 #[macro_use]
 mod matrix;
+mod collision;
+mod screen;
 mod shapes;
 
 fn main() {
-    println!("Hello World!!");
+    let mut screen = Screen::new(State::new());
+    screen.run();
+}
+
+struct State {}
+
+impl State {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+impl GameState for State {
+    fn update(&mut self, app_state: &mut ruscii::app::State) {}
+
+    fn draw(&self, pencil: &mut ruscii::drawing::Pencil, win_x: usize, win_y: usize) {
+        pencil.draw_hline('#', ruscii::spatial::Vec2 { x: 5, y: 10 }, 8);
+    }
+
+    fn key_pressed(&mut self, key: Key, app_state: &mut ruscii::app::State) {}
+
+    fn key_released(&mut self, key: Key, app_state: &mut ruscii::app::State) {
+        match key {
+            Key::Esc => app_state.stop(),
+            _ => (),
+        }
+    }
+
+    fn key_down(&mut self, key: Key, app_state: &mut ruscii::app::State) {}
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::matrix::matrix::*;
+    use crate::{
+        collision::collision::{Collider, CollisionResult, CollisionTrait, LineCollider},
+        matrix::matrix::*,
+    };
 
     #[test]
     fn matrix_equality() {
@@ -92,5 +128,44 @@ mod tests {
         let v2: Vec3 = matrix![3; 4; 5];
         assert_eq!(v2.length(), 50.0f32.sqrt());
         assert_eq!(v2.sqr_length(), 50.0);
+    }
+
+    #[test]
+    fn line_line_collision() {
+        let line1 = LineCollider::new(matrix![0.99;1.2], matrix![2.5;1], false);
+        let line2 = LineCollider::new(matrix![2.5; -1], matrix![1.1; -0.24], false);
+        let line3 = LineCollider::new(
+            matrix![0.99;1.2] + matrix![2.5;1] * 0.3,
+            matrix![2.5; 1],
+            false,
+        );
+        let line4 = LineCollider::new(matrix![0;1.2], matrix![2.5;1] * 0.2, false);
+
+        let result = line1.collision(&Collider::Line(line2.clone()), 0.01);
+        if let CollisionResult::One(x) = result {
+            let distance = (x - matrix![-2.036; -0.0105]).length();
+            println!("{}", distance);
+            assert!(distance <= 0.02);
+        } else {
+            panic!(
+                "{:#?} should have been a collision at (2.036, -0.0105)",
+                result
+            )
+        }
+
+        let result = line1.collision(&Collider::Line(line3.clone()), 0.01);
+        if let CollisionResult::Infinite = result {
+        } else {
+            panic!("{:#?} should have been infinite collisions", result);
+        }
+
+        let result = line1.collision(&Collider::Line(line4.clone()), 0.01);
+        if let CollisionResult::None = result {
+        } else {
+            panic!("{:#?} should have been no collisions", result);
+        }
+
+        assert!(line1.is_parallel(&line1));
+        assert!(!line1.is_parallel(&line2));
     }
 }
